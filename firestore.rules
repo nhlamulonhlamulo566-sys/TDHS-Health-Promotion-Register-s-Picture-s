@@ -1,0 +1,114 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Checks if the request is authenticated.
+     * @return {boolean} True if the request is authenticated, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user is the owner of the resource.
+     * @param {string} userId The user ID to compare against the authenticated user's ID.
+     * @return {boolean} True if the user ID matches the authenticated user's ID, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user has the 'Administrator' role.
+     * @return {boolean} True if the user is an Administrator, false otherwise.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator';
+    }
+
+    /**
+     * @description Checks if the authenticated user has the 'Health Promoter' role.
+     * @return {boolean} True if the user is a Health Promoter, false otherwise.
+     */
+    function isHealthPromoter() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Health Promoter';
+    }
+
+
+    /**
+     * @description Rules for the /departments collection.
+     */
+    match /departments/{departmentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the /workflows collection.
+     */
+    match /workflows/{workflowId} {
+      allow read: if isSignedIn();
+      // Admins have full write access.
+      // Other signed-in users (except Health Promoters) can also create/edit workflows.
+      allow write: if isAdmin() || (isSignedIn() && !isHealthPromoter());
+    }
+    
+    /**
+     * @description Rules for the /documents collection.
+     */
+    match /documents/{documentId} {
+      function canUserRead() {
+        // Health Promoters can ONLY read documents they initiated.
+        if (isHealthPromoter()) {
+          return resource.data.initiatorId == request.auth.uid;
+        }
+        
+        // If no workflow is assigned, only the initiator can read it (as a draft)
+        if (!resource.data.workflowId || resource.data.workflowId == '') {
+            return resource.data.initiatorId == request.auth.uid;
+        }
+        
+        // If there's a workflow, the user can read if their department is in the path
+        let workflow = get(/databases/$(database)/documents/workflows/$(resource.data.workflowId)).data;
+        let userDepartmentId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.departmentId;
+        return userDepartmentId in workflow.departmentIds;
+      }
+
+      function canUserWrite() {
+          // Create: must be a non-admin user
+          if (request.resource.data.workflowId == '') {
+            return !isAdmin() && request.resource.data.initiatorId == request.auth.uid;
+          }
+          
+          // Update: User must belong to the department that the document is pending at.
+          let userDepartmentId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.departmentId;
+          let isAtCorrectDepartment = resource.data.pendingDepartmentId == userDepartmentId;
+
+          return isAtCorrectDepartment;
+      }
+
+      allow read: if isAdmin() || (isSignedIn() && canUserRead());
+      allow write: if isAdmin() || (isSignedIn() && canUserWrite());
+    }
+
+
+    /**
+     * @description Rules for the /users collection.
+     */
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      // An admin can create, update, and delete any user.
+      // A user can update their own document.
+      allow write: if isAdmin() || (request.method == 'update' && isOwner(userId));
+    }
+
+    /**
+     * @description Rules for the /users/{userId}/notifications collection.
+     */
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+  }
+}

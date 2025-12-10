@@ -66,10 +66,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: departmentsData } = useCollection<Department>(departmentsQuery);
   const departments = useMemo(() => departmentsData || [], [departmentsData]);
   
-  const addWorkflow = (workflow: Omit<Workflow, 'id'>) => {
+  const addWorkflow = (workflow: Omit<Workflow, 'id'>): Promise<DocumentReference> => {
     if (!firestore) throw new Error("Firestore not available");
     const workflowsCol = collection(firestore, 'workflows');
-    return addDocumentNonBlocking(workflowsCol, workflow);
+    return addDocumentNonBlocking(workflowsCol, workflow) as Promise<DocumentReference>;
   };
   
   const updateWorkflow = (workflowId: string, updates: Partial<Omit<Workflow, 'id'>>) => {

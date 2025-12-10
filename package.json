@@ -31,6 +31,7 @@
     "class-variance-authority": "latest",
     "clsx": "latest",
     "date-fns": "latest",
+    "dotenv": "^17.2.3",
     "firebase": "latest",
     "genkit": "latest",
     "lucide-react": "latest",
@@ -38,6 +39,7 @@
     "patch-package": "^8.0.1",
     "react": "latest",
     "react-dom": "latest",
+    "react-is": "^19.2.1",
     "recharts": "latest",
     "tailwind-merge": "latest",
     "tailwindcss-animate": "latest",
@@ -50,6 +52,6 @@
     "genkit-cli": "latest",
     "postcss": "latest",
     "tailwindcss": "^3.4.0",
-    "typescript": "latest"
+    "typescript": "5.9.3"
   }
 }

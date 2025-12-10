@@ -1,3 +1,4 @@
+
 {
   "name": "nextn",
   "version": "0.1.0",
@@ -33,8 +34,8 @@
     "firebase": "latest",
     "genkit": "latest",
     "lucide-react": "latest",
-    "next": "^16.0.8",
-    "patch-package": "^8.0.1",
+    "next": "latest",
+    "patch-package": "latest",
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest",
